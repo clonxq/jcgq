@@ -139,23 +139,27 @@ jobs:
         TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
         TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
 
-    - name: 探测 Rust 依赖来源
+    - name: 深度探测 Rust 来源
       run: |
         cd openwrt
-        echo "### 正在分析 Rust 依赖链 ###"
-        # 1. 查找直接依赖 Rust 的包
-        echo "核心检测：以下包直接或间接依赖了 Rust 编译器"
-        ./scripts/diffconfig.sh > filtered.config
-        
-        # 使用 grep 查找所有选中状态且包含 rust 依赖信息的包
-        # 这里的原理是搜索所有 Makefile 中包含 rust 关键字的包，并检查它们是否被选中
-        grep -r "DEPENDS.*rust" package/feeds/ | cut -d: -f1 | xargs grep -l "PKG_NAME" | xargs -n1 basename | while read pkg; do
+        echo "--- 检查 .config 中与 Rust 相关的选中项 ---"
+        grep "=y" .config | grep -iE "rust|cargo" || echo "未在 .config 中直接发现 Rust"
+    
+        echo "--- 检查哪些包选中了 host-rust (编译器) ---"
+        # 查找所有 Makefile 中包含 host/rust 的引用
+        grep -r "hostpkg/rust/compile" package/feeds/ | cut -d: -f1 | xargs grep -l "PKG_NAME" | xargs -n1 basename | while read pkg; do
             if grep -q "CONFIG_PACKAGE_$pkg=y" .config; then
-                echo "找到目标：插件 [$pkg] 引入了 Rust 环境"
+                echo "发现编译器诱因：插件 [$pkg] 选中了 host-rust"
             fi
         done
-        echo "------------------------------------"
-        
+
+        echo "--- 检查常见的间接依赖 ---"
+        for pkg in "python3-cryptography" "librust" "cloudflared" "rathole" "shadowsocks-rust"; do
+            if grep -q "CONFIG_PACKAGE_$pkg=y" .config; then
+                echo "警告：发现已知 Rust 插件 [$pkg] 已被选中"
+            fi
+        done
+    
     - name: 下载安装包
       id: package
       run: |
