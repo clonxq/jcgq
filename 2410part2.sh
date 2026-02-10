@@ -44,17 +44,22 @@ fi
 
 # --- 新增：修复源码底层配置错误 ---
 
-# 5. 修复 rd05a1 递归依赖错误 (强制删除该故障包)
-# 这是导致你日志里出现 "recursive dependency detected" 的元凶
+# 3. 修复 rd05a1 递归依赖错误 (必须执行，否则 config 不准)
 find feeds/ -name "rd05a1" -type d | xargs rm -rf
 
-# 6. 修复 usbgadget 依赖缺失警告
+# 4. 修复 usbgadget 警告
 IFILE="package/utils/usbgadget/Makefile"
-if [ -f "$IFILE" ]; then
-    sed -i 's/+kmod-usb-gadget-ncm//g' "$IFILE"
-fi
+[ -f "$IFILE" ] && sed -i 's/+kmod-usb-gadget-ncm//g' "$IFILE"
 
-# 7. 彻底拦截 Rust 编译 (引蛇出洞策略)
-# 之前的 sed 修改 ci-llvm 无法修复文件缺失报错，直接删除 Rust 源码
-# 如果有插件强行调用 Rust，编译会停止并报错是谁在调用，方便我们定位
+# 5. 【核心步骤】彻底拦截并引诱 Rust 报错
+# 删除 Rust 源码文件夹。如果编译依然需要 Rust，
+# 报错信息将不再是 "checksum 错误"，而是 "No rule to make target ... rust"
+# 在那行错误的上方，会显示： "make[3]: Entering directory '/workdir/openwrt/feeds/packages/xxxx'"
+# 那个 xxxx 就是真正的元凶！
 rm -rf feeds/packages/lang/rust
+
+# 6. 在 .config 中显式禁用 Rust 相关项（尝试拦截隐式选中）
+sed -i '/CONFIG_PACKAGE_rust=y/d' .config
+sed -i '/CONFIG_PACKAGE_librust=y/d' .config
+echo "CONFIG_PACKAGE_rust=n" >> .config
+echo "CONFIG_PACKAGE_librust=n" >> .config
