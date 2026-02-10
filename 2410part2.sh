@@ -29,8 +29,6 @@ rm -rf ./feeds/luci/applications/luci-app-ssr-plus
 rm -rf feeds/packages/lang/golang
 git clone https://github.com/sbwml/packages_lang_golang -b 25.x feeds/packages/lang/golang
 
-
-
 #修复Rust编译失败
 RUST_FILE=$(find ./feeds/packages/ -maxdepth 3 -type f -wholename "*/rust/Makefile")
 if [ -f "$RUST_FILE" ]; then
