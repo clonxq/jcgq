@@ -1,16 +1,4 @@
-#
-# https://github.com/P3TERX/Actions-OpenWrt
-#
-# File: .github/workflows/openwrt-bulder.yml
-# Description: Build OpenWrt using GitHub Actions
-#
-# Copyright (c) 2019-2024 P3TERX <https://p3terx.com>
-#
-# This is free software, licensed under the MIT License.
-# See /LICENSE for more information.
-#
-
-name: jcg-q30 24.10 k5 immortalwrt-mt798x Builder
+name: jcg-q30 24.10 immortalwrt-mt798x Builder
 
 on:
   repository_dispatch:
@@ -20,7 +8,6 @@ on:
         description: 'SSH connection to Actions'
         required: false
         default: 'false'
-
 
 env:
   OPENWRT_NAME: padavanonly
@@ -38,6 +25,9 @@ env:
 jobs:
   build:
     runs-on: ubuntu-24.04
+    
+    permissions:
+      contents: write
       
     steps:
     - name: Check Server Performance
@@ -54,9 +44,9 @@ jobs:
         echo -e "$(sudo lshw -short -C memory | grep GiB)\n"
         echo "--------------------------硬盘信息--------------------------"
         echo "硬盘数量: $(ls /dev/sd* | grep -v [1-9] | wc -l)" && df -hT
-        
-    - name: "Optimize Disk Space"
-      uses: "hugoalh/disk-space-optimizer-ghaction@v0.8.1"
+
+    - name: Optimize Disk Space
+      uses: hugoalh/disk-space-optimizer-ghaction@v0.8.1
       with:
         operate_sudo: "True"
         general_include: ".+"
@@ -75,11 +65,10 @@ jobs:
         npm_prune: "True"
         npm_clean: "True"
         os_swap: "True"
-               
-    - name: After
-      run: |
-        df -H    
-                 
+
+    - name: After disk optimize
+      run: df -H
+
     - name: 检查项目分支
       uses: actions/checkout@main
 
@@ -99,31 +88,47 @@ jobs:
         sudo timedatectl set-timezone "$TZ"
         sudo mkdir -p /workdir
         sudo chown $USER:$GROUPS /workdir
-        
+
     - name: Clone source code
       working-directory: /workdir
       run: |
         df -hT $PWD
         git clone --depth=1 $REPO_URL -b $REPO_BRANCH openwrt
         ln -sf /workdir/openwrt $GITHUB_WORKSPACE/openwrt
+        
         # GitHub Action 移除国内下载源
         PROJECT_MIRRORS_FILE="./scripts/projectsmirrors.json"
         if [ -f "$PROJECT_MIRRORS_FILE" ]; then
           sed -i '/.cn\//d; /tencent/d; /aliyun/d' "$PROJECT_MIRRORS_FILE"
         fi
-        
-    - name: Load custom feeds
+
+    - name: 更新 feeds 到最新版本（重要！）
+      run: |
+        cd openwrt
+        # 强制更新 packages feed 到最新（通常包含 rust 修复）
+        ./scripts/feeds update packages
+        # 如果你有其他 feed，也可以在这里更新
+        ./scripts/feeds update -a
+
+    - name: Load custom feeds & DIY part1
       run: |
         [ -e $FEEDS_CONF ] && mv $FEEDS_CONF openwrt/feeds.conf.default
         chmod +x $DIY_P1_SH
         cd openwrt
         $GITHUB_WORKSPACE/$DIY_P1_SH
 
-    - name: 更新 & 安装 feeds
+    - name: 安装 feeds
       run: |
         cd openwrt
-        ./scripts/feeds update -a
         ./scripts/feeds install -a
+
+    - name: 清理旧的 rust 相关文件（针对 1.90 编译问题）
+      run: |
+        cd openwrt
+        rm -rf dl/rust* dl/cargo* dl/*.sig
+        rm -rf build_dir/*rust* build_dir/*cargo*
+        rm -rf staging_dir/*rust* staging_dir/*cargo*
+        echo "已清理旧的 rust 缓存和下载文件"
 
     - name: 加载config & DIY_P2_SH
       run: |
@@ -131,46 +136,68 @@ jobs:
         chmod +x $DIY_P2_SH
         cd openwrt
         $GITHUB_WORKSPACE/$DIY_P2_SH
-            
+
     - name: SSH链接管理
       uses: P3TERX/ssh2actions@main
-      if: (github.event.inputs.ssh == 'true' && github.event.inputs.ssh  != 'false') || contains(github.event.action, 'ssh')
+      if: (github.event.inputs.ssh == 'true' && github.event.inputs.ssh != 'false') || contains(github.event.action, 'ssh')
       env:
         TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
         TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
-   
-    - name: 下载安装包
+
+    - name: 下载安装包（先下载）
       id: package
       run: |
         cd openwrt
         make defconfig
-        make download -j$(nproc)
+        make download -j$(nproc) || make download -j1 V=s
         find dl -size -1024c -exec ls -l {} \;
         find dl -size -1024c -exec rm -f {} \;
-        
-    - name: Check space usage
+
+    - name: Check space usage before compile
       if: (!cancelled())
       run: df -hT
-      
-    - name: Compile the firmware
+
+    - name: Compile the firmware（对 rust 包做特殊处理）
       id: compile
       run: |
         cd openwrt
-        echo -e "$(nproc) thread compile"
-        make -j$(nproc) || make -j1 || make -j1 V=s
+        echo "开始编译，使用 $(nproc) 线程"
+        
+        # 先尝试正常多线程编译
+        make -j$(nproc) || true
+        
+        # 如果失败，单独编译 rust/host（最容易出问题的地方）
+        if [ $? -ne 0 ]; then
+          echo "编译失败，正在尝试单独编译 rust/host..."
+          make package/rust/host/clean || true
+          make package/rust/host/download || true
+          make package/rust/host/prepare V=s || true
+          make package/rust/host/compile -j1 V=s
+          
+          # 如果 rust 成功，再尝试整体编译
+          if [ $? -eq 0 ]; then
+            echo "rust/host 编译成功，继续整体编译..."
+            make -j$(nproc) || make -j1 V=s
+          fi
+        fi
+        
+        # 最终判断
+        make -j1 V=s || exit 1
+        
+        # 提取设备名称
         grep '^CONFIG_TARGET.*DEVICE.*=y' .config | sed -r 's/.*DEVICE_(.*)=y/\1/' > DEVICE_NAME
         [ -s DEVICE_NAME ] && echo "DEVICE_NAME=$(cat DEVICE_NAME)" >> $GITHUB_ENV
-        grep '^CONFIG_TARGET.*DEVICE.*=y' .config | sed -r 's/.*TARGET_.*_(.*)_DEVICE_.*=y/\1/' > TARGET_NAME
+        
+        # 提取平台/目标名称 (如 mediatek)
+        grep '^CONFIG_TARGET_BOARD.*=y' .config | sed -r 's/.*TARGET_BOARD="(.*)"/\1/' > TARGET_NAME
         [ -s TARGET_NAME ] && echo "TARGET_NAME=$(cat TARGET_NAME)" >> $GITHUB_ENV
+        
+        # 提取默认 IP 地址
         sed -n 's/.*lan) ipad=${ipaddr:-"\([0-9]\+\.[0-9]\+\.[0-9]\+\.[0-9]\+\)"} ;;.*/\1/p' package/base-files/files/bin/config_generate | head -n 1 > IP_ADDR
         [ -s IP_ADDR ] && echo "IP_ADDR=$(cat IP_ADDR)" >> $GITHUB_ENV
-        if grep -q 'CONFIG_PACKAGE_luci-app-dockerman=y' .config; then
-                echo "BUILD_DOCKERMAN=-docker" >> $GITHUB_ENV
-        else
-                echo "BUILD_DOCKERMAN=" >> $GITHUB_ENV
-        fi
-        echo "FILE_DATE=$(date +"%Y.%m.%d-%H%M")" >> $GITHUB_ENV
-        echo "status=success" >> $GITHUB_OUTPUT
+        
+        # 生成时间戳
+        echo "FILE_DATE=$(date +"%Y%m%d%H%M")" >> $GITHUB_ENV
         
     - name: Check space usage
       if: (!cancelled())
@@ -181,9 +208,19 @@ jobs:
       if: env.UPLOAD_FIRMWARE == 'true' && !cancelled()
       run: | 
         cd openwrt/bin/targets/*/*
+        # 1. 删除不必要的文件
         rm -rf packages
         sudo -E apt -yqq install rename
-        rename 's/.*${{ env.DEVICE_NAME }}/${{ env.FILE_DATE }}-${{ env.OPENWRT_NAME }}-${{ env.DEVICE_NAME }}${{ env.BUILD_DOCKERMAN }}/' *
+        
+        # 2. 定义重命名的前缀
+        PREFIX="OpenWrt-${{ env.DEVICE_NAME }}-${{ env.FILE_DATE }}"
+        
+        # 3. 对主要固件文件进行重命名 (可选，但推荐)
+        # 这会将所有以 .bin 或 .img.gz 结尾的文件加上你的前缀
+        for file in $(ls *.bin *.img.gz *.manifest 2>/dev/null); do
+          mv "$file" "${PREFIX}-${file}"
+        done
+        
         echo "FIRMWARE=$PWD" >> $GITHUB_ENV
         echo "status=success" >> $GITHUB_OUTPUT
         
@@ -198,29 +235,56 @@ jobs:
       id: tag
       if: env.UPLOAD_RELEASE == 'true' && !cancelled()
       run: |
-        touch release.txt
-        echo "- 使用源码：${{ env.REPO_URL }}" >> release.txt
-        echo "- 使用分支：${{ env.REPO_BRANCH }}" >> release.txt
-        echo "- 登录地址：${{ env.IP_ADDR }}" >> release.txt
-        KVER=$(grep -oP "^kernel.*" ${{ env.FIRMWARE }}/*.manifest | head -n 1 | grep -oP "[4-6]\.[0-9]{1,3}\.[0-9]{1,3}")
-        echo "- 内核版本：$KVER" >> release.txt
-        # --- 关键部分：提取并呈现所有 luci-app 插件 ---
-        echo "" >> release.txt
-        echo "### 已安装应用列表" >> release.txt
-        echo "| 应用名称 | 版本 |" >> release.txt
-        echo "| :--- | :--- |" >> release.txt
-        grep "luci-app-" ${{ env.FIRMWARE }}/*.manifest | awk '{print "| " $1 " | " $3 " |"}' >> release.txt
-        # ------------------------------------------
-        echo "release_tag=${{ env.FILE_DATE }}-${{ env.OPENWRT_NAME }}-${{ env.DEVICE_NAME }}${{ env.BUILD_DOCKERMAN }}" >> $GITHUB_OUTPUT
+        # 1. 定位并解析 manifest 文件
+        MANIFEST_FILE=$(find openwrt/bin/targets/ -name "*.manifest" | head -n 1)
+        
+        # 2. 获取 Git 提交信息
+        cd openwrt
+        GIT_COMMIT_HASH=$(git rev-parse --short HEAD)
+        GIT_COMMIT_URL="${{ env.REPO_URL }}/commit/$GIT_COMMIT_HASH"
+        cd ..
+
+        # 3. 开始构建 release_body.txt
+        echo "### 编译信息" > release_body.txt
+        echo "- **源码：** ${{ env.REPO_URL }}" >> release_body.txt
+        echo "- **分支：** ${{ env.REPO_BRANCH }}" >> release_body.txt
+        echo "- **提交：** [$GIT_COMMIT_HASH]($GIT_COMMIT_URL)" >> release_body.txt
+        echo "- **配置：** ${{ env.DEVICE_NAME }}" >> release_body.txt
+        echo "- **平台：** ${{ env.TARGET_NAME }}" >> release_body.txt
+        echo "" >> release_body.txt
+        
+        echo "### 管理信息" >> release_body.txt
+        echo "- **登录地址：** ${{ env.IP_ADDR || '192.168.1.1' }}" >> release_body.txt
+        echo "- **登录密码：** 无" >> release_body.txt
+        echo "- **WIFI名称：** CWRT" >> release_body.txt
+        echo "- **WIFI密码：** 12345678" >> release_body.txt
+        
+        if [ -f "$MANIFEST_FILE" ]; then
+          KVER=$(grep -oP "^kernel.*" "$MANIFEST_FILE" | head -n 1 | grep -oP "[4-6]\.[0-9]{1,3}\.[0-9]{1,3}")
+          echo "- **内核版本：** $KVER" >> release_body.txt
+          
+          echo "" >> release_body.txt
+          echo "### 插件列表" >> release_body.txt
+          echo "\`\`\`text" >> release_body.txt
+          # 提取插件并按每行3个排列，增加容错
+          grep "luci-app-" "$MANIFEST_FILE" | awk '{print $1}' | sort -u | xargs -n 3 | column -t 2>/dev/null || grep "luci-app-" "$MANIFEST_FILE" | awk '{print $1}' | sort -u | xargs -n 3 >> release_body.txt
+          echo "" >> release_body.txt
+          # 提取主题
+          grep "luci-theme-" "$MANIFEST_FILE" | awk '{print $1}' | sort -u >> release_body.txt
+          echo "\`\`\`" >> release_body.txt
+        fi
+
+        # 输出 Release 标签名 (移除 FILE_DATE 前面的底杠，建议放在后面)
+        echo "release_tag=${{ env.DEVICE_NAME }}-${{ env.FILE_DATE }}" >> $GITHUB_OUTPUT
         echo "status=success" >> $GITHUB_OUTPUT
 
     - name: 发布固件至Release
       uses: softprops/action-gh-release@v2.1.0
       if: steps.tag.outputs.status == 'success' && !cancelled()
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
         files: ${{ env.FIRMWARE }}/*
-        name: ${{ env.FILE_DATE }}-${{ env.OPENWRT_NAME }}-${{ env.DEVICE_NAME }}${{ env.BUILD_DOCKERMAN }}
-        tag_name: ${{ steps.tag.outputs.release_tag }}
-        body_path: release.txt
+        tag_name: ${{ steps.tag.outputs.release_tag }} # 关键
+        name: OpenWrt-${{ env.DEVICE_NAME }}-${{ env.FILE_DATE }} # 给 Release 标题起个好听的名字
+        body_path: release_body.txt
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
