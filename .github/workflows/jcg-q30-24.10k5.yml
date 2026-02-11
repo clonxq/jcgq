@@ -1,4 +1,4 @@
-name: jcg-q30 24.10 immortalwrt-mt798x Builder
+name: jcg-q30 24.10k5 immortalwrt-mt798x Builder
 
 on:
   repository_dispatch:
