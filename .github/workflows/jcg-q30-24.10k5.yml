@@ -140,23 +140,33 @@ jobs:
       id: compile
       run: |
         cd openwrt
+        # 1. 预处理 Rust 环境，解决常见校验报错
+        echo "Preparing Rust environment..."
+        make package/feeds/packages/rust/prepare V=s -j$(nproc) 2>/dev/null || true
+        
+        # 使用更稳健的单行 Python 处理校验文件
+        find build_dir -name ".cargo-checksum.json" 2>/dev/null | while read f; do
+          if grep -q "Cargo.toml.orig" "$f"; then
+            echo "Patching checksum: $f"
+            python3 -c "import json, sys; p=sys.argv[1]; d=json.load(open(p)); d['files']={k:v for k,v in d['files'].items() if k!='Cargo.toml.orig'}; json.dump(d, open(p,'w'))" "$f"
+          fi
+        done
+
+        # 2. 开始正式编译
         echo -e "$(nproc) thread compile"
-        make -j$(nproc) || make -j1 || make -j1 V=s
+        make -j$(nproc) || make -j1 V=s
         echo "status=success" >> $GITHUB_OUTPUT
         
-        # 提取设备名称
+        # 3. 提取变量 (设备名、平台名、IP)
         grep '^CONFIG_TARGET.*DEVICE.*=y' .config | sed -r 's/.*DEVICE_(.*)=y/\1/' > DEVICE_NAME
         [ -s DEVICE_NAME ] && echo "DEVICE_NAME=$(cat DEVICE_NAME)" >> $GITHUB_ENV
         
-        # 修复：更稳健地提取平台名称 (Target Board)
         grep '^CONFIG_TARGET_BOARD' .config | cut -d'=' -f2 | tr -d '"' > TARGET_NAME
         [ -s TARGET_NAME ] && echo "TARGET_NAME=$(cat TARGET_NAME)" >> $GITHUB_ENV
         
-        # 提取默认 IP 地址
         sed -n 's/.*lan) ipad=${ipaddr:-"\([0-9]\+\.[0-9]\+\.[0-9]\+\.[0-9]\+\)"} ;;.*/\1/p' package/base-files/files/bin/config_generate | head -n 1 > IP_ADDR
         [ -s IP_ADDR ] && echo "IP_ADDR=$(cat IP_ADDR)" >> $GITHUB_ENV
         
-        # 生成时间戳
         echo "FILE_DATE=$(date +"%Y%m%d%H%M")" >> $GITHUB_ENV
         
     - name: Check space usage
