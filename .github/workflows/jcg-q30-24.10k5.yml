@@ -141,7 +141,7 @@ jobs:
       run: |
         cd openwrt
         echo -e "$(nproc) thread compile"
-        make -j$(nproc) || make -j1 V=s
+        make -j$(nproc) || make -j1 || make -j1 V=s
         echo "status=success" >> $GITHUB_OUTPUT
         
         # 提取设备名称
@@ -246,7 +246,7 @@ jobs:
       with:
         files: ${{ env.FIRMWARE }}/*
         tag_name: ${{ steps.tag.outputs.release_tag }} # 关键
-        name: padavanonly-${{ env.DEVICE_NAME }}-${{ env.FILE_DATE }} # 给 Release 标题起个好听的名字
+        name: OpenWrt-${{ env.DEVICE_NAME }}-${{ env.FILE_DATE }} # 给 Release 标题起个好听的名字
         body_path: release_body.txt
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -254,14 +254,18 @@ jobs:
     - name: Delete workflow runs
       uses: Mattraks/delete-workflow-runs@main
       with:
-        retain_days: 0
-        keep_minimum_runs: 2
+        token: ${{ secrets.GITHUB_TOKEN }}
+        repository: ${{ github.repository }}
+        retain_days: 1
+        keep_minimum_runs: 3
+        # 显式指定只清理当前这个工作流，防止误伤
+        workflow_id: ${{ github.workflow }}
 
     - name: Remove old Releases
       uses: dev-drprasad/delete-older-releases@master
       if: env.UPLOAD_RELEASE == 'true' && !cancelled()
       with:
-        keep_latest: 10
+        keep_latest: 8
         delete_tags: true
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
