@@ -108,7 +108,7 @@ jobs:
         # 强制更新 packages feed 到最新（通常包含 rust 修复）
         ./scripts/feeds update packages
         # 如果你有其他 feed，也可以在这里更新
-        ./scripts/feeds update -a
+        # ./scripts/feeds update -a
 
     - name: Load custom feeds & DIY part1
       run: |
