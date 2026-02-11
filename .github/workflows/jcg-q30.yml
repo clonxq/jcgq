@@ -10,7 +10,7 @@
 # See /LICENSE for more information.
 #
 
-name: jcg-q30 immortalwrt-mt798x Builder
+name: jcg-q30 21.02 immortalwrt-mt798x Builder
 
 on:
   repository_dispatch:
