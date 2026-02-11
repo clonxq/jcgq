@@ -37,7 +37,11 @@ env:
 
 jobs:
   build:
-    runs-on: ubuntu-22.04     
+    runs-on: ubuntu-22.04
+    
+    permissions:
+      contents: write
+      
     steps:
     - name: 清理磁盘空间(Ubuntu)
       uses: jlumbroso/free-disk-space@main
