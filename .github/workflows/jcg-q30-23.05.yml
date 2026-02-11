@@ -162,7 +162,18 @@ jobs:
       if: env.UPLOAD_FIRMWARE == 'true' && !cancelled()
       run: |
         cd openwrt/bin/targets/*/*
+        # 1. 删除不必要的文件
         rm -rf packages
+        
+        # 2. 定义重命名的前缀
+        PREFIX="OpenWrt-${{ env.DEVICE_NAME }}-${{ env.FILE_DATE }}"
+        
+        # 3. 对主要固件文件进行重命名 (可选，但推荐)
+        # 这会将所有以 .bin 或 .img.gz 结尾的文件加上你的前缀
+        for file in $(ls *.bin *.img.gz *.manifest 2>/dev/null); do
+          mv "$file" "${PREFIX}-${file}"
+        done
+        
         echo "FIRMWARE=$PWD" >> $GITHUB_ENV
         echo "status=success" >> $GITHUB_OUTPUT
 
