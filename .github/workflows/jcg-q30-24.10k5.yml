@@ -95,40 +95,19 @@ jobs:
         df -hT $PWD
         git clone --depth=1 $REPO_URL -b $REPO_BRANCH openwrt
         ln -sf /workdir/openwrt $GITHUB_WORKSPACE/openwrt
-        
-        # GitHub Action 移除国内下载源
-        PROJECT_MIRRORS_FILE="./scripts/projectsmirrors.json"
-        if [ -f "$PROJECT_MIRRORS_FILE" ]; then
-          sed -i '/.cn\//d; /tencent/d; /aliyun/d' "$PROJECT_MIRRORS_FILE"
-        fi
 
-    - name: 更新 feeds 到最新版本（重要！）
-      run: |
-        cd openwrt
-        # 强制更新 packages feed 到最新（通常包含 rust 修复）
-        ./scripts/feeds update packages
-        # 如果你有其他 feed，也可以在这里更新
-        # ./scripts/feeds update -a
-
-    - name: Load custom feeds & DIY part1
+    - name: Load custom feeds
       run: |
         [ -e $FEEDS_CONF ] && mv $FEEDS_CONF openwrt/feeds.conf.default
         chmod +x $DIY_P1_SH
         cd openwrt
         $GITHUB_WORKSPACE/$DIY_P1_SH
 
-    - name: 安装 feeds
+    - name: 更新 & 安装 feeds
       run: |
         cd openwrt
+        ./scripts/feeds update -a
         ./scripts/feeds install -a
-
-    - name: 清理旧的 rust 相关文件（针对 1.90 编译问题）
-      run: |
-        cd openwrt
-        rm -rf dl/rust* dl/cargo* dl/*.sig
-        rm -rf build_dir/*rust* build_dir/*cargo*
-        rm -rf staging_dir/*rust* staging_dir/*cargo*
-        echo "已清理旧的 rust 缓存和下载文件"
 
     - name: 加载config & DIY_P2_SH
       run: |
@@ -136,53 +115,34 @@ jobs:
         chmod +x $DIY_P2_SH
         cd openwrt
         $GITHUB_WORKSPACE/$DIY_P2_SH
-
+            
     - name: SSH链接管理
       uses: P3TERX/ssh2actions@main
-      if: (github.event.inputs.ssh == 'true' && github.event.inputs.ssh != 'false') || contains(github.event.action, 'ssh')
+      if: (github.event.inputs.ssh == 'true' && github.event.inputs.ssh  != 'false') || contains(github.event.action, 'ssh')
       env:
         TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
         TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
 
-    - name: 下载安装包（先下载）
+    - name: 下载安装包
       id: package
       run: |
         cd openwrt
         make defconfig
-        make download -j$(nproc) || make download -j1 V=s
+        make download -j$(nproc)
         find dl -size -1024c -exec ls -l {} \;
         find dl -size -1024c -exec rm -f {} \;
 
-    - name: Check space usage before compile
+    - name: Check space usage
       if: (!cancelled())
       run: df -hT
-
-    - name: Compile the firmware（对 rust 包做特殊处理）
+      
+    - name: Compile the firmware
       id: compile
       run: |
         cd openwrt
-        echo "开始编译，使用 $(nproc) 线程"
-        
-        # 先尝试正常多线程编译
-        make -j$(nproc) || true
-        
-        # 如果失败，单独编译 rust/host（最容易出问题的地方）
-        if [ $? -ne 0 ]; then
-          echo "编译失败，正在尝试单独编译 rust/host..."
-          make package/rust/host/clean || true
-          make package/rust/host/download || true
-          make package/rust/host/prepare V=s || true
-          make package/rust/host/compile -j1 V=s
-          
-          # 如果 rust 成功，再尝试整体编译
-          if [ $? -eq 0 ]; then
-            echo "rust/host 编译成功，继续整体编译..."
-            make -j$(nproc) || make -j1 V=s
-          fi
-        fi
-        
-        # 最终判断
-        make -j1 V=s || exit 1
+        echo -e "$(nproc) thread compile"
+        make -j$(nproc) || make -j1 || make -j1 V=s
+        echo "status=success" >> $GITHUB_OUTPUT
         
         # 提取设备名称
         grep '^CONFIG_TARGET.*DEVICE.*=y' .config | sed -r 's/.*DEVICE_(.*)=y/\1/' > DEVICE_NAME
@@ -202,15 +162,21 @@ jobs:
     - name: Check space usage
       if: (!cancelled())
       run: df -hT
-      
-    - name: 整理文件并重命名
+
+    - name: Upload bin directory
+      uses: actions/upload-artifact@main
+      if: steps.compile.outputs.status == 'success' && env.UPLOAD_BIN_DIR == 'true'
+      with:
+        name: OpenWrt_bin${{ env.DEVICE_NAME }}${{ env.FILE_DATE }}
+        path: openwrt/bin
+
+    - name: Organize files
       id: organize
       if: env.UPLOAD_FIRMWARE == 'true' && !cancelled()
-      run: | 
+      run: |
         cd openwrt/bin/targets/*/*
         # 1. 删除不必要的文件
         rm -rf packages
-        sudo -E apt -yqq install rename
         
         # 2. 定义重命名的前缀
         PREFIX="OpenWrt-${{ env.DEVICE_NAME }}-${{ env.FILE_DATE }}"
@@ -223,14 +189,14 @@ jobs:
         
         echo "FIRMWARE=$PWD" >> $GITHUB_ENV
         echo "status=success" >> $GITHUB_OUTPUT
-        
-    - name: 打包上传固件到Actions Artifacts
+
+    - name: Upload firmware directory
       uses: actions/upload-artifact@main
       if: steps.organize.outputs.status == 'success' && !cancelled()
       with:
-        name: ${{ env.FILE_DATE }}-${{ env.OPENWRT_NAME }}-${{ env.DEVICE_NAME }}${{ env.BUILD_DOCKERMAN }}
+        name: OpenWrt_firmware${{ env.DEVICE_NAME }}${{ env.FILE_DATE }}
         path: ${{ env.FIRMWARE }}
-
+        
     - name: 生成固件Release标签
       id: tag
       if: env.UPLOAD_RELEASE == 'true' && !cancelled()
@@ -280,14 +246,14 @@ jobs:
         # 输出 Release 标签名
         echo "release_tag=${{ env.DEVICE_NAME }}-${{ env.FILE_DATE }}" >> $GITHUB_OUTPUT
         echo "status=success" >> $GITHUB_OUTPUT
-        
+
     - name: 发布固件至Release
       uses: softprops/action-gh-release@v2.1.0
       if: steps.tag.outputs.status == 'success' && !cancelled()
       with:
         files: ${{ env.FIRMWARE }}/*
         tag_name: ${{ steps.tag.outputs.release_tag }} # 关键
-        name: OpenWrt-${{ env.DEVICE_NAME }}-${{ env.FILE_DATE }} # 给 Release 标题起个好听的名字
+        name: padavanonly-${{ env.DEVICE_NAME }}-${{ env.FILE_DATE }} # 给 Release 标题起个好听的名字
         body_path: release_body.txt
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
