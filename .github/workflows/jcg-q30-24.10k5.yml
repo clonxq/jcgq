@@ -141,34 +141,41 @@ jobs:
       run: |
         cd openwrt
 
-        # ─────────────────────────────────────────────────────────────
-        # 方案A：临时跳过 rust 包的 PKG_HASH 校验（针对 Cargo.toml.orig 问题）
-        echo "Skipping rust PKG_HASH validation..."
-        sed -i 's/^PKG_HASH:=.*/PKG_HASH:=skip/' feeds/packages/lang/rust/Makefile || true
-        # 如果上面没生效，也可以尝试注释掉整行 PKG_HASH
-        # sed -i '/^PKG_HASH:=/s/^/#/' feeds/packages/lang/rust/Makefile || true
-        # ─────────────────────────────────────────────────────────────
+        # 清理 rust 残留（防止旧文件干扰）
+        rm -rf dl/rust* dl/cargo* dl/*rust*.tar* dl/*.sig 2>/dev/null || true
+        rm -rf build_dir/*rust* build_dir/*cargo* 2>/dev/null || true
 
-        echo "开始编译，使用 $(nproc) 线程..."
+        # 先 prepare rust/host（解压源码，生成 vendor）
+        echo "Preparing rust/host..."
+        make package/rust/host/prepare V=s || true
 
-        # 保留你原有的 python 补丁逻辑（可以先保留，互不冲突）
-        echo "Preparing Rust environment..."
-        make package/feeds/packages/rust/prepare V=s -j$(nproc) 2>/dev/null || true
-
-        # 你原有的 .cargo-checksum.json 补丁（可选保留或注释掉）
-        find build_dir -name ".cargo-checksum.json" 2>/dev/null | while read f; do
-          if grep -q "Cargo.toml.orig" "$f"; then
-            echo "Patching checksum: $f"
-            python3 -c "import json, sys; p=sys.argv[1]; d=json.load(open(p)); d['files']={k:v for k,v in d['files'].items() if k!='Cargo.toml.orig'}; json.dump(d, open(p,'w'))" "$f"
+        # 现在 vendor 目录已生成，修改所有 .cargo-checksum.json 移除 .orig 键
+        echo "Patching all .cargo-checksum.json to ignore .orig files..."
+        find build_dir/target-*/host/rustc-*/vendor -type f -name ".cargo-checksum.json" 2>/dev/null | while read -r f; do
+          if grep -q "\.orig" "$f"; then
+            echo "Patching: $f"
+            python3 -c "import json, sys; p=sys.argv[1]; d=json.load(open(p)); d['files']={k:v for k,v in d['files'].items() if not k.endswith('.orig')}; json.dump(d, open(p, 'w'), indent=2)" "$f" || echo "Failed to patch $f"
+          else
+            echo "No .orig in $f, skipping"
           fi
         done
 
-        # 开始正式编译
-        make -j$(nproc) || make -j1 V=s
+        # 继续编译 rust/host（现在 checksum 应该匹配）
+        echo "Compiling rust/host..."
+        make package/rust/host/compile -j1 V=s || true
+
+        # 如果 rust 成功，再整体编译
+        if [ $? -eq 0 ]; then
+          echo "rust/host success, starting full build..."
+          make -j$(nproc) V=s || make -j1 V=s
+        else
+          echo "rust/host failed, exiting"
+          exit 1
+        fi
 
         echo "status=success" >> $GITHUB_OUTPUT
 
-        # 提取变量 (保持不变)
+        # 提取变量 (保持你原来的逻辑)
         grep '^CONFIG_TARGET.*DEVICE.*=y' .config | sed -r 's/.*DEVICE_(.*)=y/\1/' > DEVICE_NAME
         [ -s DEVICE_NAME ] && echo "DEVICE_NAME=$(cat DEVICE_NAME)" >> $GITHUB_ENV
         
