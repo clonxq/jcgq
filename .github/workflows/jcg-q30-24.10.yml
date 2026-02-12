@@ -234,9 +234,6 @@ jobs:
           echo ""
           echo "### 管理信息"
           echo "- **登录地址：** ${{ env.IP_ADDR || '192.168.1.1' }}"
-          echo "- **登录密码：** 无"
-          echo "- **WIFI名称：** CWRT"
-          echo "- **WIFI密码：** 12345678"
           echo ""
         } > release_body.txt
         
