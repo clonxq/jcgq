@@ -10,6 +10,12 @@
 # Description: OpenWrt DIY script part 2 (After Update feeds)
 #
 
+echo "========================================="
+echo "当前脚本工作目录是: $(pwd)"
+echo "目录下的文件列表:"
+ls -F
+echo "========================================="
+
 #修改默认IP地址
 sed -i 's/192\.168\.[0-9]*\.1/192.168.5.1/g' package/base-files/files/bin/config_generate
 #修改WIFI名称
