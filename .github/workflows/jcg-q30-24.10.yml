@@ -234,6 +234,9 @@ jobs:
           echo ""
           echo "### 管理信息"
           echo "- **登录地址：** ${{ env.IP_ADDR || '192.168.1.1' }}"
+          echo "- **登录密码：** 无"
+          echo "- **WIFI名称：** CWRT"
+          echo "- **WIFI密码：** 12345678"
           echo ""
         } > release_body.txt
         
@@ -245,11 +248,11 @@ jobs:
           echo "### 插件列表" >> release_body.txt
           echo "\`\`\`text" >> release_body.txt
           
-          # 重点：先格式化再存入变量，最后一次性写入，确保 100% 成功
-          APPS=$(grep "luci-app-" "$MANIFEST_FILE" | awk '{print $1}' | sort -u | xargs -n 3 | column -t)
-          if [ -n "$APPS" ]; then
-            echo "$APPS" >> release_body.txt
-          fi
+          # 提取插件名和版本号，每行一个，使用 column 自动对齐括号
+          grep "luci-app-" "$MANIFEST_FILE" | awk '{print $1 "  [" $2 "]"}' | sort -u | column -t >> release_body.txt
+          
+          echo "" >> release_body.txt
+          echo "[ 主题 ]" >> release_body.txt
           
           # 提取主题
           grep "luci-theme-" "$MANIFEST_FILE" | awk '{print $1}' | sort -u >> release_body.txt
@@ -259,7 +262,7 @@ jobs:
         # 输出 Release 标签名
         echo "release_tag=${{ env.DEVICE_NAME }}-${{ env.FILE_DATE }}" >> $GITHUB_OUTPUT
         echo "status=success" >> $GITHUB_OUTPUT
-
+        
     - name: 发布固件至Release
       uses: softprops/action-gh-release@v2.1.0
       if: steps.tag.outputs.status == 'success' && !cancelled()
