@@ -38,3 +38,20 @@ if [ -f "$RUST_FILE" ]; then
 
 	cd $PKG_PATH && echo "rust has been fixed!"
 fi
+
+RUST_MAKE="./feeds/packages/lang/rust/Makefile"
+if [ -f "$RUST_MAKE" ]; then
+    echo "正在将 Rust 降级至 1.89.0..."
+    # 还原版本号
+    sed -i 's/PKG_VERSION:=1.90.0/PKG_VERSION:=1.89.0/g' "$RUST_MAKE"
+    # 还原校验值 (PKG_HASH)
+    sed -i 's/PKG_HASH:=6bfeaddd90ffda2f063492b092bfed925c4b8c701579baf4b1316e021470daac/PKG_HASH:=0b9d55610d8270e06c44f459d1e2b7918a5e673809c592abed9b9c600e33d95a/g' "$RUST_MAKE"
+fi
+
+RUST_PATCH="./feeds/packages/lang/rust/patches/0001-Update-xz2-and-use-it-static.patch"
+if [ -f "$RUST_PATCH" ]; then
+    echo "正在修正 Rust 补丁文件..."
+    # 还原补丁里的 sysinfo 版本号
+    sed -i 's/sysinfo = { version = "0.36.0"/sysinfo = { version = "0.35.0"/g' "$RUST_PATCH"
+fi
+
