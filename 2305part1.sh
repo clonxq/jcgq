@@ -10,19 +10,31 @@
 # See /LICENSE for more information.
 #
 
-# Uncomment a feed source
-#sed -i 's/^#\(.*helloworld\)/\1/' feeds.conf.default
+# --- 定义通用局部拉取函数 ---
+function extract_pkg() {
+    local repo_url=$1
+    local repo_path=$2
+    local local_path=$3
+    local branch=${4:-""}
+    local tmp_dir="tmp_extract_$(date +%s)"
 
-function merge_package(){
-    repo=`echo $1 | rev | cut -d'/' -f 1 | rev`
-    pkg=`echo $2 | rev | cut -d'/' -f 1 | rev`
-    # find package/ -follow -name $pkg -not -path "package/custom/*" | xargs -rt rm -rf
-    git clone --depth=1 --single-branch $1
-    mv $2 package/custom/
-    rm -rf $repo
-}
-function drop_package(){
-    find package/ -follow -name $1 -not -path "package/custom/*" | xargs -rt rm -rf
+    echo ">>> 正在提取: $repo_path (分支: ${branch:-默认})"
+    local clone_args="--depth 1 --filter=blob:none --sparse"
+    [ -n "$branch" ] && clone_args="$clone_args -b $branch"
+
+    git clone $clone_args "$repo_url" "$tmp_dir"
+    if [ $? -eq 0 ]; then
+        cd "$tmp_dir" || return
+        git sparse-checkout set "$repo_path"
+        cd ..
+        mkdir -p "$(dirname "$local_path")"
+        [ -d "$local_path" ] && rm -rf "$local_path"
+        if [ -d "$tmp_dir/$repo_path" ]; then
+            cp -r "$tmp_dir/$repo_path" "$local_path"
+            echo ">>> 成功保存至: $local_path"
+        fi
+        rm -rf "$tmp_dir"
+    fi
 }
 
 # Add a feed source
@@ -33,4 +45,5 @@ find ./ | grep Makefile | grep v2ray-geodata | xargs rm -f
 find ./ | grep Makefile | grep mosdns | xargs rm -f
 git clone https://github.com/sbwml/luci-app-mosdns -b v5 package/mosdns
 git clone https://github.com/sbwml/v2ray-geodata package/v2ray-geodata
-git clone -b js https://github.com/sirpdboy/luci-app-adguardhome package/luci-app-adguardhome
+git clone https://github.com/w9315273/luci-app-adguardhome package/luci-app-adguardhome
+extract_pkg "https://github.com/kenzok8/openwrt-packages" "adguardhome" "package/adguardhome"
