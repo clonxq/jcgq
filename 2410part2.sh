@@ -25,6 +25,7 @@ sed -i 's/ImmortalWrt-5G/Q30-5G/g' package/mtk/applications/mtwifi-cfg/files/mtw
 ##-----------------Del duplicate packages------------------
 rm -rf feeds/packages/net/open-app-filter
 ##-----------------DIY-----------------
+rm -rf ./feeds/packages/net/adguardhome
 rm -rf ./feeds/packages/net/mosdns
 rm -rf ./feeds/packages/net/shadowsocks-libev
 rm -rf ./feeds/packages/net/shadowsocks-rust
