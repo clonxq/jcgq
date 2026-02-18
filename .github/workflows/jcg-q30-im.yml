@@ -1,0 +1,296 @@
+#
+# Copyright (c) 2019-2020 P3TERX <https://p3terx.com>
+#
+# This is free software, licensed under the MIT License.
+# See /LICENSE for more information.
+#
+# https://github.com/P3TERX/Actions-OpenWrt
+# Description: Build OpenWrt using GitHub Actions
+#
+###############手动修改##############
+name: JDCloud-AX6000-Baili-immortalwrt
+
+on:
+  repository_dispatch:
+  workflow_dispatch:
+    inputs:
+      ssh:
+        description: 'SSH connection to Actions'
+        required: false
+        default: 'false'
+#  schedule:
+#    - cron: 0 16 * * *
+
+env:
+  ###############手动修改##############
+  OPENWRT_NAME: immortalwrt
+  REPO_URL: https://github.com/immortalwrt/immortalwrt
+  REPO_BRANCH: openwrt-25.12
+  FEEDS_CONF: feeds.conf.default
+  CONFIG_FILE: im.config
+  DIY_P1_SH: impart1.sh
+  DIY_P2_SH: impart2.sh
+  SSH_ACTIONS: true
+  UPLOAD_FIRMWARE: true
+  UPLOAD_RELEASE: true
+  TZ: Asia/Shanghai
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    
+    permissions:
+      contents: write
+      
+    steps:
+    - name: Check Server Performance
+      run: |
+        echo "警告⚠"
+        echo "分配的服务器性能有限，若选择的插件过多，务必注意CPU性能！"
+        echo -e "已知CPU型号(降序): 7763，8370C，8272CL，8171M，E5-2673\n"
+        echo "--------------------------CPU信息--------------------------"
+        echo "CPU物理数量: $(cat /proc/cpuinfo | grep "physical id" | sort | uniq | wc -l)"
+        echo "CPU核心数量: $(nproc)"
+        echo -e "CPU型号信息:$(cat /proc/cpuinfo | grep -m1 name | awk -F: '{print $2}')\n"
+        echo "--------------------------内存信息--------------------------"
+        echo "已安装内存详细信息:"
+        echo -e "$(sudo lshw -short -C memory | grep GiB)\n"
+        echo "--------------------------硬盘信息--------------------------"
+        echo "硬盘数量: $(ls /dev/sd* | grep -v [1-9] | wc -l)" && df -hT
+
+    - name: Optimize Disk Space
+      uses: hugoalh/disk-space-optimizer-ghaction@v0.8.1
+      with:
+        operate_sudo: "True"
+        general_include: ".+"
+        general_exclude: |-
+          ^GCC$
+          ^G\+\+$
+          Clang
+          LLVM
+        docker_include: ".+"
+        docker_prune: "True"
+        docker_clean: "True"
+        apt_prune: "True"
+        apt_clean: "True"
+        homebrew_prune: "True"
+        homebrew_clean: "True"
+        npm_prune: "True"
+        npm_clean: "True"
+        os_swap: "True"
+
+    - name: After disk optimize
+      run: df -H
+
+    - name: 检查项目分支
+      uses: actions/checkout@main
+
+    - name: 初始化编译环境
+      env:
+        DEBIAN_FRONTEND: noninteractive
+      run: |
+        sudo -E apt -yqq update
+        sudo -E apt -yqq full-upgrade
+        sudo -E apt -yqq autoremove --purge
+        sudo -E apt -yqq autoclean
+        sudo -E apt -yqq clean
+        sudo -E apt -yqq install rename dos2unix python3-netifaces libfuse-dev llvm-dev libclang-dev clang
+        sudo bash -c 'bash <(curl -sL https://build-scripts.immortalwrt.org/init_build_environment.sh)'
+        sudo rm -rf /etc/apt/sources.list.d/* /usr/local/lib/android /opt/ghc /usr/share/dotnet /usr/local/graalvm /usr/local/.ghcup \
+        /usr/local/share/powershell /usr/local/share/chromium /usr/local/lib/node_modules
+        sudo timedatectl set-timezone "$TZ"
+        sudo mkdir -p /workdir
+        sudo chown $USER:$GROUPS /workdir
+
+    - name: Clone source code
+      working-directory: /workdir
+      run: |
+        df -hT $PWD
+        git clone --depth=1 $REPO_URL -b $REPO_BRANCH openwrt
+        ln -sf /workdir/openwrt $GITHUB_WORKSPACE/openwrt
+        
+        # GitHub Action 移除国内下载源
+        PROJECT_MIRRORS_FILE="./scripts/projectsmirrors.json"
+        if [ -f "$PROJECT_MIRRORS_FILE" ]; then
+          sed -i '/.cn\//d; /tencent/d; /aliyun/d' "$PROJECT_MIRRORS_FILE"
+        fi
+          
+    - name: 加载feeds.conf.default & DIY_P1_SH
+      run: |
+        [ -e $FEEDS_CONF ] && mv $FEEDS_CONF openwrt/feeds.conf.default
+        chmod +x $DIY_P1_SH
+        cd openwrt
+        $GITHUB_WORKSPACE/$DIY_P1_SH
+
+    - name: 更新 & 安装 feeds
+      run: |
+        cd openwrt
+        ./scripts/feeds update -a
+        ./scripts/feeds install -a
+
+    - name: 加载config & DIY_P2_SH
+      run: |
+        [ -e $CONFIG_FILE ] && mv $CONFIG_FILE openwrt/.config
+        chmod +x $DIY_P2_SH
+        cd openwrt
+        $GITHUB_WORKSPACE/$DIY_P2_SH
+        
+    - name: SSH链接管理
+      uses: P3TERX/ssh2actions@main
+      if: (github.event.inputs.ssh == 'true' && github.event.inputs.ssh  != 'false') || contains(github.event.action, 'ssh')
+      env:
+        TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+
+    - name: 下载安装包
+      id: package
+      run: |
+        cd openwrt
+        make defconfig
+        make download -j$(nproc)
+        find dl -size -1024c -exec ls -l {} \;
+        find dl -size -1024c -exec rm -f {} \;
+
+    - name: Check space usage
+      if: (!cancelled())
+      run: df -hT
+      
+    - name: Compile the firmware
+      id: compile
+      run: |
+        cd openwrt
+        echo -e "$(nproc) thread compile"
+        make -j$(nproc) || make -j1 V=s
+        echo "status=success" >> $GITHUB_OUTPUT
+        
+        # 提取设备名称
+        grep '^CONFIG_TARGET.*DEVICE.*=y' .config | sed -r 's/.*DEVICE_(.*)=y/\1/' > DEVICE_NAME
+        [ -s DEVICE_NAME ] && echo "DEVICE_NAME=$(cat DEVICE_NAME)" >> $GITHUB_ENV
+        
+        # 修复：更稳健地提取平台名称 (Target Board)
+        grep '^CONFIG_TARGET_BOARD' .config | cut -d'=' -f2 | tr -d '"' > TARGET_NAME
+        [ -s TARGET_NAME ] && echo "TARGET_NAME=$(cat TARGET_NAME)" >> $GITHUB_ENV
+        
+        # 提取默认 IP 地址
+        sed -n 's/.*lan) ipad=${ipaddr:-"\([0-9]\+\.[0-9]\+\.[0-9]\+\.[0-9]\+\)"} ;;.*/\1/p' package/base-files/files/bin/config_generate | head -n 1 > IP_ADDR
+        [ -s IP_ADDR ] && echo "IP_ADDR=$(cat IP_ADDR)" >> $GITHUB_ENV
+        
+        # 生成时间戳
+        echo "FILE_DATE=$(date +"%Y%m%d%H%M")" >> $GITHUB_ENV
+        
+    - name: Check space usage
+      if: (!cancelled())
+      run: df -hT
+
+    - name: Organize files
+      id: organize
+      if: env.UPLOAD_FIRMWARE == 'true' && !cancelled()
+      run: |
+        cd openwrt/bin/targets/*/*
+        # 1. 删除不必要的目录
+        rm -rf packages
+        
+        # 2. 遍历当前目录下所有文件
+        # 排除已经包含日期的文件，避免重复命名
+        for file in $(ls *.* 2>/dev/null);
+        do
+          if [[ "$file" != *"${{ env.FILE_DATE }}"* ]]; then
+            # 提取文件名主体
+            BASE_NAME="${file%.*}"
+            # 提取扩展名（包括开头的点）
+            EXT=".${file##*.}"
+            # 重命名：原名-日期.后缀
+            mv "$file" "${BASE_NAME}-${{ env.FILE_DATE }}${EXT}"
+          fi
+        done
+        
+        echo "FIRMWARE=$PWD" >> $GITHUB_ENV
+        echo "status=success" >> $GITHUB_OUTPUT
+
+    - name: Upload firmware directory
+      uses: actions/upload-artifact@main
+      if: steps.organize.outputs.status == 'success' && !cancelled()
+      with:
+        name: OpenWrt_firmware${{ env.DEVICE_NAME }}${{ env.FILE_DATE }}
+        path: ${{ env.FIRMWARE }}
+        
+    - name: 生成固件Release标签
+      id: tag
+      if: env.UPLOAD_RELEASE == 'true' && !cancelled()
+      run: |
+        # 1. 定位并解析 manifest 文件
+        MANIFEST_FILE=$(find openwrt/bin/targets/ -name "*.manifest" | head -n 1)
+        
+        # 2. 获取 Git 提交信息
+        cd openwrt
+        GIT_COMMIT_HASH=$(git rev-parse --short HEAD)
+        GIT_COMMIT_URL="${{ env.REPO_URL }}/commit/$GIT_COMMIT_HASH"
+        cd ..
+
+        # 3. 开始构建 release_body.txt
+        {
+          echo "### 编译信息"
+          echo "- **源码：** ${{ env.REPO_URL }}"
+          echo "- **分支：** ${{ env.REPO_BRANCH }}"
+          echo "- **提交：** [$GIT_COMMIT_HASH]($GIT_COMMIT_URL)"
+          echo "- **配置：** ${{ env.DEVICE_NAME }}"
+          echo "- **平台：** ${{ env.TARGET_NAME }}"
+          echo ""
+          echo "### 管理信息"
+          echo "- **登录地址：** ${{ env.IP_ADDR || '192.168.1.1' }}"
+          echo ""
+        } > release_body.txt
+        
+        if [ -f "$MANIFEST_FILE" ]; then
+          # 提取内核版本
+          KVER=$(grep -oP "^kernel.*" "$MANIFEST_FILE" | head -n 1 | grep -oP "[4-6]\.[0-9]{1,3}\.[0-9]{1,3}")
+          echo "- **内核版本：** $KVER" >> release_body.txt
+          
+          echo "### 插件列表" >> release_body.txt
+          echo "\`\`\`text" >> release_body.txt
+          
+          # 重点：针对 "包名 - 版本" 格式优化的提取逻辑
+          # 1. 过滤出 luci-app- 开头的行
+          # 2. 用 awk 提取第一列(包名)和最后一列(版本号)
+          # 3. 用 column -t 实现精美对齐
+          grep "luci-app-" "$MANIFEST_FILE" | awk '{print $1 "  [" $NF "]"}' | sort -u | column -t >> release_body.txt
+          
+          echo "" >> release_body.txt
+          echo "[ 主题 ]" >> release_body.txt
+          grep "luci-theme-" "$MANIFEST_FILE" | awk '{print $1}' | sort -u >> release_body.txt
+          echo "\`\`\`" >> release_body.txt
+        fi
+
+        # 输出 Release 标签名
+        echo "release_tag=${{ env.DEVICE_NAME }}-${{ env.FILE_DATE }}" >> $GITHUB_OUTPUT
+        echo "status=success" >> $GITHUB_OUTPUT
+
+    - name: 发布固件至Release
+      uses: softprops/action-gh-release@v2.1.0
+      if: steps.tag.outputs.status == 'success' && !cancelled()
+      with:
+        files: ${{ env.FIRMWARE }}/*
+        tag_name: ${{ steps.tag.outputs.release_tag }} # 关键
+        name: OpenWrt-${{ env.DEVICE_NAME }}-${{ env.FILE_DATE }} # 给 Release 标题起个好听的名字
+        body_path: release_body.txt
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Delete workflow runs
+      uses: Mattraks/delete-workflow-runs@main
+      with:
+        token: ${{ secrets.GITHUB_TOKEN }}
+        repository: ${{ github.repository }}
+        retain_days: 1
+        keep_minimum_runs: 3
+        # 显式指定只清理当前这个工作流，防止误伤
+        workflow_id: ${{ github.workflow }}
+
+    - name: Remove old Releases
+      uses: dev-drprasad/delete-older-releases@master
+      if: env.UPLOAD_RELEASE == 'true' && !cancelled()
+      with:
+        keep_latest: 8
+        delete_tags: true
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
