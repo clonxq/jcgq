@@ -25,13 +25,12 @@ sed -i 's/ImmortalWrt-5G/Q30-5G/g' package/mtk/applications/mtwifi-cfg/files/mtw
 ##-----------------Del duplicate packages------------------
 rm -rf feeds/packages/net/open-app-filter
 ##-----------------DIY-----------------
-rm -rf ./feeds/packages/net/adguardhome
 rm -rf ./feeds/packages/net/mosdns
-# rm -rf ./feeds/packages/net/shadowsocks-libev
-# rm -rf ./feeds/packages/net/shadowsocks-rust
-# rm -rf ./feeds/packages/net/shadowsocksr-libev
-# rm -rf ./feeds/luci/applications/luci-app-passwall
-# rm -rf ./feeds/luci/applications/luci-app-passwall2
+rm -rf ./feeds/packages/net/shadowsocks-libev
+rm -rf ./feeds/packages/net/shadowsocks-rust
+rm -rf ./feeds/packages/net/shadowsocksr-libev
+rm -rf ./feeds/luci/applications/luci-app-passwall
+rm -rf ./feeds/luci/applications/luci-app-passwall2
 rm -rf ./feeds/luci/applications/luci-app-ssr-plus
 rm -rf feeds/packages/lang/golang
 git clone https://github.com/sbwml/packages_lang_golang -b 25.x feeds/packages/lang/golang
