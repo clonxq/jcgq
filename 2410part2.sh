@@ -10,13 +10,6 @@
 # Description: OpenWrt DIY script part 2 (After Update feeds)
 #
 
-# --- 调试信息：显示环境 ---
-echo "========================================="
-echo "执行目录: $(pwd)"
-echo "当前目录内容摘要:"
-ls -F | head -n 10
-echo "========================================="
-
 #修改默认IP地址
 sed -i 's/192\.168\.[0-9]*\.1/192.168.5.1/g' package/base-files/files/bin/config_generate
 #修改WIFI名称
@@ -24,7 +17,6 @@ sed -i 's/ImmortalWrt-2.4G/Q30-2G/g' package/mtk/applications/mtwifi-cfg/files/m
 sed -i 's/ImmortalWrt-5G/Q30-5G/g' package/mtk/applications/mtwifi-cfg/files/mtwifi.sh
 ##-----------------Del duplicate packages------------------
 rm -rf feeds/packages/net/open-app-filter
-##-----------------DIY-----------------
 rm -rf ./feeds/packages/net/adguardhome
 rm -rf ./feeds/packages/net/mosdns
 rm -rf ./feeds/packages/net/shadowsocks-libev
