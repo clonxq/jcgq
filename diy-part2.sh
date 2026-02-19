@@ -29,6 +29,10 @@ rm -rf ./feeds/luci/applications/luci-app-ddns-go
 rm -rf feeds/packages/lang/golang
 git clone https://github.com/sbwml/packages_lang_golang -b 25.x feeds/packages/lang/golang
 
+mkdir -p files/etc/openclash/core
+curl -L https://github.com/vernesong/OpenClash/raw/refs/heads/core/master/meta/clash-linux-arm64.tar.gz | tar -xz -C files/etc/openclash/core/
+mv files/etc/openclash/core/clash files/etc/openclash/core/clash_meta
+chmod +x files/etc/openclash/core/clash_meta
 
 #修复Rust编译失败
 RUST_FILE=$(find ./feeds/packages/ -maxdepth 3 -type f -wholename "*/rust/Makefile")
