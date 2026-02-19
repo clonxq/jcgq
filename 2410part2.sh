@@ -27,6 +27,15 @@ rm -rf ./feeds/luci/applications/luci-app-ssr-plus
 rm -rf feeds/packages/lang/golang
 git clone https://github.com/sbwml/packages_lang_golang -b 25.x feeds/packages/lang/golang
 
+# 创建 OpenClash 核心存放目录
+mkdir -p files/etc/openclash/core
+# 下载 Meta 核心
+curl -L https://github.com/vernesong/OpenClash/raw/refs/heads/core/master/meta/clash-linux-arm64.tar.gz | tar -xz -C files/etc/openclash/core/
+# 重命名核心
+mv files/etc/openclash/core/clash files/etc/openclash/core/clash_meta
+# 赋予执行权限
+chmod +x files/etc/openclash/core/clash_meta
+
 # 修正 ebtables 源码哈希值，解决编译下载校验失败问题
 ebtables_makefile="package/network/utils/ebtables/Makefile"
 if [ -f "$ebtables_makefile" ]; then
