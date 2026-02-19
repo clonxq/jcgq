@@ -37,6 +37,9 @@ curl -sSL https://github.com/vernesong/OpenClash/raw/refs/heads/core/master/meta
 mv files/etc/openclash/core/clash files/etc/openclash/core/clash_meta
 chmod +x files/etc/openclash/core/clash_meta
 
+echo "Core components integration completed!"
+
+
 #修复Rust编译失败
 RUST_FILE=$(find ./feeds/packages/ -maxdepth 3 -type f -wholename "*/rust/Makefile")
 if [ -f "$RUST_FILE" ]; then
