@@ -28,21 +28,6 @@ rm -rf ./feeds/luci/applications/luci-app-ssr-plus
 rm -rf feeds/packages/lang/golang
 git clone https://github.com/sbwml/packages_lang_golang -b 25.x feeds/packages/lang/golang
 
-# --- AdGuardHome 集成 ---
-echo "Optimizing AdGuardHome Binary..."
-mkdir -p files/usr/bin
-# 下载到临时目录处理
-curl -sSL https://github.com/AdguardTeam/AdGuardHome/releases/download/v0.107.69/AdGuardHome_linux_arm64.tar.gz | tar -xz -C /tmp/
-# 强制移动，覆盖可能存在的旧文件
-mv -f /tmp/AdGuardHome/AdGuardHome files/usr/bin/AdGuardHome
-chmod +x files/usr/bin/AdGuardHome
-# 清理临时垃圾
-rm -rf /tmp/AdGuardHome
-
-echo "Core components integration completed!"
-
-# 4. 清理临时目录
-rm -rf /tmp/AdGuardHome
 # 修正 ebtables 源码哈希值，解决编译下载校验失败问题
 ebtables_makefile="package/network/utils/ebtables/Makefile"
 if [ -f "$ebtables_makefile" ]; then
