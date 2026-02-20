@@ -29,17 +29,6 @@ rm -rf ./feeds/luci/applications/luci-app-ddns-go
 rm -rf feeds/packages/lang/golang
 git clone https://github.com/sbwml/packages_lang_golang -b 25.x feeds/packages/lang/golang
 
-# --- OpenClash 核心集成 ---
-echo "Optimizing OpenClash Cores..."
-mkdir -p files/etc/openclash/core
-# 使用 -sSL 保证下载稳定且日志整洁
-curl -sSL https://github.com/vernesong/OpenClash/raw/refs/heads/core/master/meta/clash-linux-arm64.tar.gz | tar -xz -C files/etc/openclash/core/
-mv files/etc/openclash/core/clash files/etc/openclash/core/clash_meta
-chmod +x files/etc/openclash/core/clash_meta
-
-echo "Core components integration completed!"
-
-
 #修复Rust编译失败
 RUST_FILE=$(find ./feeds/packages/ -maxdepth 3 -type f -wholename "*/rust/Makefile")
 if [ -f "$RUST_FILE" ]; then
