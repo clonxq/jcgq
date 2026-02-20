@@ -25,7 +25,7 @@ env:
   ###############手动修改##############
   OPENWRT_NAME: immortalwrt
   REPO_URL: https://github.com/immortalwrt/immortalwrt
-  REPO_BRANCH: openwrt-25.12
+  REPO_BRANCH: openwrt-24.10
   FEEDS_CONF: feeds.conf.default
   CONFIG_FILE: im.config
   DIY_P1_SH: impart1.sh
