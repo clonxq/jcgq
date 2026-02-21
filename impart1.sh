@@ -43,7 +43,7 @@ git clone https://github.com/sbwml/luci-app-mosdns -b v5 package/mosdns
 git clone https://github.com/sbwml/v2ray-geodata package/v2ray-geodata
 git clone https://github.com/sirpdboy/luci-app-adguardhome package/luci-app-adguardhome
 extract_pkg "https://github.com/kenzok8/openwrt-packages" "adguardhome" "package/adguardhome"
-git clone --depth=1 https://github.com/padavanonly/immortalwrt-mt798x-6.6 temp_repo
+git clone --depth=1 -b 2410 https://github.com/padavanonly/immortalwrt-mt798x-6.6 temp_repo
 mkdir -p package/mtk-apps
 cp -rn temp_repo/package/mtk/applications/wrtbwmon package/mtk-apps/
 cp -rn temp_repo/package/mtk/applications/luci-app-wrtbwmon package/mtk-apps/
