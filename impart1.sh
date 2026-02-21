@@ -43,5 +43,3 @@ git clone https://github.com/sbwml/luci-app-mosdns -b v5 package/mosdns
 git clone https://github.com/sbwml/v2ray-geodata package/v2ray-geodata
 git clone https://github.com/sirpdboy/luci-app-adguardhome package/luci-app-adguardhome
 extract_pkg "https://github.com/kenzok8/openwrt-packages" "adguardhome" "package/adguardhome"
-extract_pkg "https://github.com/kenzok8/small-package" "wrtbwmon" "package/wrtbwmon"
-extract_pkg "https://github.com/kenzok8/small-package" "luci-app-wrtbwmon" "package/luci-app-wrtbwmon"
