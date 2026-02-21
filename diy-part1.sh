@@ -31,8 +31,6 @@ function drop_package(){
 git clone https://github.com/sirpdboy/luci-app-advanced.git package/luci-app-advanced
 #git clone https://github.com/sirpdboy/luci-app-ddns-go.git package/ddns-go
 #git clone https://github.com/KFERMercer/luci-app-tcpdump.git package/luci-app-tcpdump
-git clone https://github.com/brvphoenix/wrtbwmon.git package/wrtbwmon
-git clone https://github.com/brvphoenix/luci-app-wrtbwmon.git package/luci-app-wrtbwmon
 find ./ | grep Makefile | grep v2ray-geodata | xargs rm -f
 find ./ | grep Makefile | grep mosdns | xargs rm -f
 git clone https://github.com/sbwml/luci-app-mosdns -b v5 package/mosdns
@@ -40,4 +38,10 @@ git clone https://github.com/sbwml/v2ray-geodata package/v2ray-geodata
 merge_package https://github.com/vernesong/OpenClash OpenClash/luci-app-openclash
 merge_package https://github.com/kenzok8/openwrt-packages openwrt-packages/luci-app-adguardhome
 merge_package https://github.com/kenzok8/openwrt-packages openwrt-packages/adguardhome
-
+git clone --depth=1 -b 2410 https://github.com/padavanonly/immortalwrt-mt798x-6.6 temp_repo
+mkdir -p package/mtk-apps
+cp -rn temp_repo/package/mtk/applications/wrtbwmon package/mtk-apps/
+cp -rn temp_repo/package/mtk/applications/luci-app-wrtbwmon package/mtk-apps/
+rm -rf feeds/luci/applications/luci-app-wrtbwmon
+rm -rf feeds/packages/net/wrtbwmon
+rm -rf temp_repo
