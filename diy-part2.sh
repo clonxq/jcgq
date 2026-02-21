@@ -22,8 +22,9 @@ rm -rf ./feeds/packages/net/adguardhome
 rm -rf ./feeds/packages/net/mosdns
 # rm -rf ./feeds/packages/net/smartdns
 rm -rf ./feeds/luci/applications/luci-app-passwall
+rm -rf ./feeds/luci/applications/luci-app-passwal2
 rm -rf ./feeds/luci/applications/luci-app-alist
-# rm -rf ./feeds/luci/applications/luci-app-mwan3helper
+rm -rf ./feeds/luci/applications/luci-app-mwan3helper
 rm -rf ./feeds/luci/applications/luci-app-ssr-plus
 rm -rf ./feeds/luci/applications/luci-app-openclash
 rm -rf ./feeds/luci/applications/luci-app-wechatpush
