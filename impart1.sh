@@ -43,3 +43,15 @@ git clone https://github.com/sbwml/luci-app-mosdns -b v5 package/mosdns
 git clone https://github.com/sbwml/v2ray-geodata package/v2ray-geodata
 git clone https://github.com/sirpdboy/luci-app-adguardhome package/luci-app-adguardhome
 extract_pkg "https://github.com/kenzok8/openwrt-packages" "adguardhome" "package/adguardhome"
+# 1. 克隆整个仓库（深度为1）
+git clone --depth=1 https://github.com/padavanonly/immortalwrt-mt798x-6.6 temp_repo
+# 2. 确保目标目录存在（可选，通常 package/ 已经存在）
+mkdir -p package/mtk-apps
+# 3. 复制这两个核心组件
+cp -rn temp_repo/package/mtk/applications/wrtbwmon package/mtk-apps/
+cp -rn temp_repo/package/mtk/applications/luci-app-wrtbwmon package/mtk-apps/
+# 4. 【关键】删除 feeds 中可能存在的原版，防止编译冲突
+rm -rf feeds/luci/applications/luci-app-wrtbwmon
+rm -rf feeds/packages/net/wrtbwmon
+# 5. 清理临时仓库
+rm -rf temp_repo
