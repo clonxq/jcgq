@@ -1,0 +1,53 @@
+name: Cleanup Hub
+
+on:
+  #schedule:
+    #- cron: '0 0 * * 1' # 每周一执行
+  workflow_dispatch:   # 支持手动触发
+
+jobs:
+  cleanup:
+    runs-on: ubuntu-latest
+    permissions:
+      actions: write
+      contents: write
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Delete Old Workflow Runs
+        run: |
+          echo "正在搜索 30 天前的工作流记录..."
+          
+          # 1. 使用 list 命令获取 30 天前的所有运行记录 ID
+          # --created "<$(date...)" 在 list 命令中是标准支持的
+          # --limit 1000 确保能覆盖较多记录
+          RUN_IDS=$(gh run list --created "<$(date -d '30 days ago' +%Y-%m-%d)" --limit 1000 --json databaseId --jq '.[].databaseId')
+
+          if [ -z "$RUN_IDS" ]; then
+            echo "没有找到 30 天前的记录，无需清理。"
+          else
+            echo "正在删除以下运行记录..."
+            for id in $RUN_IDS; do
+              gh run delete "$id"
+            done
+            echo "清理完成！"
+          fi
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Delete Old Releases (Keep latest 5)
+        run: |
+          echo "正在检查并清理旧的 Releases..."
+          # 获取所有 Release 的 Tag 列表，跳过前 5 个最新的，删除剩下的
+          gh release list --limit 100 | tail -n +6 | awk '{print $1}' > old_releases.txt
+          
+          while read -r tag; do
+            if [ -n "$tag" ]; then
+              echo "正在删除 Release 和 Tag: $tag"
+              gh release delete "$tag" --yes --cleanup-tag
+            fi
+          done < old_releases.txt
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
