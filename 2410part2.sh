@@ -48,3 +48,4 @@ if [ -f "$RUST_MAKE" ]; then
     echo ">>> Rust Makefile 处理完毕。"
 else
     echo ">>> 错误: 未找到 $RUST_MAKE"
+fi
