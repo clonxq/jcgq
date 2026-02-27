@@ -28,12 +28,6 @@ rm -rf ./feeds/luci/applications/luci-app-ssr-plus
 rm -rf feeds/packages/lang/golang
 git clone https://github.com/sbwml/packages_lang_golang -b 25.x feeds/packages/lang/golang
 
-# 修正 ebtables 源码哈希值，解决编译下载校验失败问题
-ebtables_makefile="package/network/utils/ebtables/Makefile"
-if [ -f "$ebtables_makefile" ]; then
-    sed -i 's/1ee560498e1a047b329eab3dad8425ae51e7f0527e4495efb99481ca11206b37/3039d73b167c41025b1b401b647743b9c6d786613c693eef34de325b30de6d47/g' "$ebtables_makefile"
-fi
-
 ## ----------------- Rust 综合修复逻辑 -----------------
 RUST_MAKE="feeds/packages/lang/rust/Makefile"
 
@@ -56,15 +50,6 @@ if [ -f "$RUST_MAKE" ]; then
 else
     echo ">>> 错误: 未找到 $RUST_MAKE"
 fi
-
-# 3. 修正补丁文件
-RUST_PATCH="feeds/packages/lang/rust/patches/0001-Update-xz2-and-use-it-static.patch"
-if [ -f "$RUST_PATCH" ]; then
-    echo ">>> 正在修正 Rust 补丁中的 sysinfo 版本..."
-    sed -i 's/sysinfo = { version = "0.36.0"/sysinfo = { version = "0.35.0"/g' "$RUST_PATCH"
-    echo ">>> 补丁修正完毕。"
-fi
-
 echo "========================================="
 echo "DIY Part2 脚本执行结束"
 echo "========================================="
