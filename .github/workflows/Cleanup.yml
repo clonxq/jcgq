@@ -40,8 +40,8 @@ jobs:
       - name: Delete Old Releases (Keep latest 5)
         run: |
           echo "正在检查并清理旧的 Releases..."
-          # 获取所有 Release 的 Tag 列表，跳过前 5 个最新的，删除剩下的
-          gh release list --limit 100 | tail -n +6 | awk '{print $1}' > old_releases.txt
+          # 获取所有 Release 的 Tag 列表，跳过前 3 个最新的，删除剩下的
+          gh release list --limit 100 | tail -n +4 | awk '{print $1}' > old_releases.txt
           
           while read -r tag; do
             if [ -n "$tag" ]; then
