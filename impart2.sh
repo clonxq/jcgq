@@ -14,15 +14,15 @@
 sed -i 's/192.168.1.1/192.168.5.1/g' package/base-files/files/bin/config_generate
 rm -rf package/feeds/luci/luci-app-wrtbwmon
 rm -rf package/feeds/packages/wrtbwmon
-rm -rf ./feeds/packages/net/adguardhome
-rm -rf ./feeds/packages/net/mosdns
-rm -rf ./feeds/packages/net/shadowsocks-libev
-rm -rf ./feeds/packages/net/shadowsocks-rust
-rm -rf ./feeds/packages/net/shadowsocksr-libev
-rm -rf ./feeds/luci/applications/luci-app-passwall
-rm -rf ./feeds/luci/applications/luci-app-passwall2
-rm -rf ./feeds/luci/applications/luci-app-ssr-plus
-rm -rf ./feeds/luci/applications/luci-app-openclash
+rm -rf feeds/packages/net/adguardhome
+rm -rf feeds/packages/net/mosdns
+rm -rf feeds/packages/net/shadowsocks-libev
+rm -rf feeds/packages/net/shadowsocks-rust
+rm -rf feeds/packages/net/shadowsocksr-libev
+rm -rf feeds/luci/applications/luci-app-passwall
+rm -rf feeds/luci/applications/luci-app-passwall2
+rm -rf feeds/luci/applications/luci-app-ssr-plus
+rm -rf feeds/luci/applications/luci-app-openclash
 rm -rf feeds/packages/lang/golang
 git clone https://github.com/sbwml/packages_lang_golang -b 25.x feeds/packages/lang/golang
 
