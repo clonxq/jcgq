@@ -9,7 +9,7 @@ on:
         required: false
         default: 'false'
   schedule:
-    - cron: 0 12 */15 * *
+    - cron: 0 12 */25 * *
 
 env:
   OPENWRT_NAME: padavanonly
