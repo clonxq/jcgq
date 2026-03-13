@@ -18,6 +18,11 @@ on:
         description: 'SSH connection to Actions'
         required: false
         default: 'false'
+      include_mwan3:
+        description: '是否编译 luci-app-mwan3'
+        required: true
+        default: false
+        type: boolean
 #  schedule:
 #    - cron: 0 16 * * *
 
@@ -134,6 +139,18 @@ jobs:
         chmod +x $DIY_P2_SH
         cd openwrt
         $GITHUB_WORKSPACE/$DIY_P2_SH
+        
+    - name: 处理 mwan3 编译选项
+      run: |
+        cd openwrt
+        if [ "${{ github.event.inputs.include_mwan3 }}" == "true" ]; then
+          echo "CONFIG_PACKAGE_luci-app-mwan3=y" >> .config
+          echo "CONFIG_PACKAGE_luci-i18n-mwan3-zh-cn=y" >> .config
+          echo "已在 .config 中启用 mwan3"
+        else
+          echo "CONFIG_PACKAGE_luci-app-mwan3=n" >> .config
+          echo "跳过编译 mwan3"
+        fi       
         
     - name: SSH链接管理
       uses: P3TERX/ssh2actions@main
