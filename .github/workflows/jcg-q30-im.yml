@@ -158,7 +158,24 @@ jobs:
       env:
         TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
         TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+    - name: 格式化缓存Key变量
+      run: |
+        # 将分支名中的特殊字符替换为 '-'，防止缓存 key 命名非法
+        SAFE_BRANCH=$(echo "${{ env.REPO_BRANCH }}" | sed 's/[^a-zA-Z0-9]/_/g')
+        echo "SAFE_BRANCH=$SAFE_BRANCH" >> $GITHUB_ENV
 
+    - name: 加载编译缓存
+      uses: actions/cache@main
+      with:
+        path: |
+          openwrt/.ccache
+          openwrt/staging_dir/host
+          openwrt/staging_dir/hostpkg
+          openwrt/staging_dir/toolchain-*
+        key: ${{ runner.os }}-openwrt-${{ env.SAFE_BRANCH }}-${{ hashFiles('openwrt/.config') }}
+        restore-keys: |
+          ${{ runner.os }}-openwrt-${{ env.SAFE_BRANCH }}-
+          
     - name: 下载安装包
       id: package
       run: |
