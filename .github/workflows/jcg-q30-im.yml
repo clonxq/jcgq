@@ -317,8 +317,7 @@ jobs:
         repository: ${{ github.repository }}
         retain_days: 1
         keep_minimum_runs: 2
-        # 显式指定只清理当前这个工作流，防止误伤
-        workflow_id: ${{ github.workflow }}
+        delete_workflow_pattern: "${{ github.workflow }}"
 
     - name: Remove old Releases
       uses: dev-drprasad/delete-older-releases@master
@@ -326,6 +325,6 @@ jobs:
       with:
         keep_latest: 2
         delete_tags: true
-        filter_tags: "k6-*"
+        delete_tag_pattern: "k6-.*"
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
