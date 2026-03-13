@@ -23,8 +23,8 @@ on:
         required: true
         default: false
         type: boolean
-#  schedule:
-#    - cron: 0 16 * * *
+  schedule:
+    - cron: 0 12 */6 * *
 
 env:
   ###############手动修改##############
