@@ -20,11 +20,11 @@ on:
         description: 'SSH connection to Actions'
         required: false
         default: 'false'
-      include_mwan3:
-        description: '是否编译 luci-app-mwan3 (多线多拨)'
+      mwan3:
+        description: '是否编译 luci-app-mwan3'
         required: true
-        type: boolean
         default: false
+        type: boolean
 env:
   REPO_URL: https://github.com/hanwckf/immortalwrt-mt798x
   REPO_BRANCH: openwrt-21.02
