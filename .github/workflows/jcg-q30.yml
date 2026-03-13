@@ -24,7 +24,7 @@ on:
         description: '是否编译 luci-app-mwan3 (多线多拨)'
         required: false
         type: boolean
-        default: 'false'
+        default: false
 env:
   REPO_URL: https://github.com/hanwckf/immortalwrt-mt798x
   REPO_BRANCH: openwrt-21.02
