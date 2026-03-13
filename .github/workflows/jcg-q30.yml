@@ -22,7 +22,7 @@ on:
         default: 'false'
       include_mwan3:
         description: '是否编译 luci-app-mwan3 (多线多拨)'
-        required: false
+        required: true
         type: boolean
         default: false
 env:
