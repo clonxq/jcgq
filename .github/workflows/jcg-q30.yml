@@ -20,7 +20,7 @@ on:
         description: 'SSH connection to Actions'
         required: false
         default: 'false'
-      mwan3:
+      include_mwan3:
         description: '是否编译 luci-app-mwan3'
         required: true
         default: false
