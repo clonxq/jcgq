@@ -168,10 +168,9 @@ jobs:
       uses: actions/cache@main
       with:
         path: |
-          openwrt/.ccache
-          openwrt/staging_dir/host
-          openwrt/staging_dir/hostpkg
-          openwrt/staging_dir/toolchain-*
+          /workdir/openwrt/.ccache
+          /workdir/openwrt/staging_dir/host*
+          /workdir/openwrt/staging_dir/tool*
         key: ${{ runner.os }}-openwrt-${{ env.SAFE_BRANCH }}-${{ hashFiles('openwrt/.config') }}
         restore-keys: |
           ${{ runner.os }}-openwrt-${{ env.SAFE_BRANCH }}-
