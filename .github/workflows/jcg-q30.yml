@@ -291,7 +291,7 @@ jobs:
         retain_days: 1
         keep_minimum_runs: 3
         # 显式指定只清理当前这个工作流，防止误伤
-        workflow_id: ${{ github.workflow }}
+        delete_workflow_pattern: "${{ github.workflow }}"
 
     - name: Remove old Releases
       uses: dev-drprasad/delete-older-releases@master
