@@ -24,7 +24,7 @@ on:
         default: false
         type: boolean
 #  schedule:
-#    - cron: 0 12 */6 * *
+#    - cron: 0 12 * * 2
 
 env:
   ###############手动修改##############
