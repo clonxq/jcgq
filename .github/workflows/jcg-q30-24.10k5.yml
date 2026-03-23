@@ -193,18 +193,21 @@ jobs:
       if: env.UPLOAD_FIRMWARE == 'true' && !cancelled()
       run: |
         cd openwrt/bin/targets/*/*
-        # 1. 删除不必要的文件 [cite: 23]
+        # 1. 删除不必要的目录
         rm -rf packages
         
-        # 2. 遍历并重命名文件 
-        for file in $(ls *.bin *.img.gz *.manifest 2>/dev/null);
+        # 2. 遍历当前目录下所有文件
+        # 排除已经包含日期的文件，避免重复命名
+        for file in $(ls *.* 2>/dev/null);
         do
-          # 提取文件名主体（不含扩展名）
-          BASE_NAME="${file%.*}"
-          # 提取扩展名（支持 .bin 或 .img.gz）
-          EXT="${file#$BASE_NAME}"
-          # 将日期插入到原文件名后面，扩展名之前
-          mv "$file" "${BASE_NAME}-${{ env.FILE_DATE }}${EXT}"
+          if [[ "$file" != *"${{ env.FILE_DATE }}"* ]]; then
+            # 提取文件名主体
+            BASE_NAME="${file%.*}"
+            # 提取扩展名（包括开头的点）
+            EXT=".${file##*.}"
+            # 重命名：原名-日期.后缀
+            mv "$file" "${BASE_NAME}-${{ env.FILE_DATE }}${EXT}"
+          fi
         done
         
         echo "FIRMWARE=$PWD" >> $GITHUB_ENV
@@ -252,13 +255,14 @@ jobs:
           echo "### 插件列表" >> release_body.txt
           echo "\`\`\`text" >> release_body.txt
           
-          # 重点：先格式化再存入变量，最后一次性写入，确保 100% 成功
-          APPS=$(grep "luci-app-" "$MANIFEST_FILE" | awk '{print $1}' | sort -u | xargs -n 3 | column -t)
-          if [ -n "$APPS" ]; then
-            echo "$APPS" >> release_body.txt
-          fi
+          # 重点：针对 "包名 - 版本" 格式优化的提取逻辑
+          # 1. 过滤出 luci-app- 开头的行
+          # 2. 用 awk 提取第一列(包名)和最后一列(版本号)
+          # 3. 用 column -t 实现精美对齐
+          grep "luci-app-" "$MANIFEST_FILE" | awk '{print $1 "  [" $NF "]"}' | sort -u | column -t >> release_body.txt
           
-          # 提取主题
+          echo "" >> release_body.txt
+          echo "[ 主题 ]" >> release_body.txt
           grep "luci-theme-" "$MANIFEST_FILE" | awk '{print $1}' | sort -u >> release_body.txt
           echo "\`\`\`" >> release_body.txt
         fi
@@ -284,14 +288,14 @@ jobs:
         token: ${{ secrets.GITHUB_TOKEN }}
         repository: ${{ github.repository }}
         retain_days: 1
-        keep_minimum_runs: 1
+        keep_minimum_runs: 2
         delete_workflow_pattern: "${{ github.workflow }}"
 
     - name: Remove old Releases
       uses: dev-drprasad/delete-older-releases@master
       if: env.UPLOAD_RELEASE == 'true' && !cancelled()
       with:
-        keep_latest: 1
+        keep_latest: 2
         delete_tags: true
         delete_tag_pattern: "k5-.*"
       env:
