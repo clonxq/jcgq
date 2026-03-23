@@ -316,14 +316,14 @@ jobs:
         token: ${{ secrets.GITHUB_TOKEN }}
         repository: ${{ github.repository }}
         retain_days: 1
-        keep_minimum_runs: 1
+        keep_minimum_runs: 2
         delete_workflow_pattern: "${{ github.workflow }}"
 
     - name: Remove old Releases
       uses: dev-drprasad/delete-older-releases@master
       if: env.UPLOAD_RELEASE == 'true' && !cancelled()
       with:
-        keep_latest: 1
+        keep_latest: 2
         delete_tags: true
         delete_tag_pattern: "k6-.*"
       env:
