@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: MIT
 # Copyright (C) 2026 VIKINGYFY
 
-name: Auto-Clean
+name: Clean workflows
 
 on:
   workflow_dispatch:
@@ -16,5 +16,6 @@ jobs:
         uses: ophub/delete-releases-workflows@main
         with:
           delete_releases: false
+          delete_workflows: true
           workflows_keep_day: 0
           gh_token: ${{secrets.GITHUB_TOKEN}}
