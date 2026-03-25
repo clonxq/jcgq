@@ -23,7 +23,7 @@ jobs:
           # 1. 使用 list 命令获取 30 天前的所有运行记录 ID
           # --created "<$(date...)" 在 list 命令中是标准支持的
           # --limit 1000 确保能覆盖较多记录
-          RUN_IDS=$(gh run list --created "<$(date -d '30 days ago' +%Y-%m-%d)" --limit 1000 --json databaseId --jq '.[].databaseId')
+          RUN_IDS=$(gh run list --created "<$(date -d '1 days ago' +%Y-%m-%d)" --limit 1000 --json databaseId --jq '.[].databaseId')
 
           if [ -z "$RUN_IDS" ]; then
             echo "没有找到 30 天前的记录，无需清理。"
