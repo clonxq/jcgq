@@ -41,6 +41,7 @@ jobs:
     
     permissions:
       contents: write
+      actions: write
       
     steps:
     - name: 清理磁盘空间(Ubuntu)
