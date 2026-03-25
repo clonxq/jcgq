@@ -8,15 +8,10 @@ jobs:
     permissions:
       actions: write
     steps:
-    - name: Delete ALL workflow runs
-      uses: Mattraks/delete-workflow-runs@main
-      with:
-        token: ${{ secrets.GITHUB_TOKEN }}
-        repository: ${{ github.repository }}
-        retain_days: 0
-        keep_minimum_runs: 0
-        # 修正参数名，使用正则匹配所有 workflow
-        delete_workflow_pattern: ".*" 
+    - name: Delete all runs using GH CLI
+      run: |
+        # 获取所有工作流 ID 并强制删除其运行记录
+        gh run list --limit 1000 --json databaseId -q '.[].databaseId' | xargs -I{} gh run delete {}
       env:
-        # 消除 Node 20 弃用警告
-        FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+        # 这里建议也优先使用上面提到的 PAT (secrets.MY_TOKEN)
+        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
