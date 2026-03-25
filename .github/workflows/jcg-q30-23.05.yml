@@ -251,7 +251,7 @@ jobs:
       uses: dev-drprasad/delete-older-releases@master
       if: env.UPLOAD_RELEASE == 'true' && !cancelled()
       with:
-        keep_latest: 2
+        keep_latest: 1
         delete_tags: true
         delete_tag_pattern: "2305-.*"
       env:
