@@ -1,0 +1,18 @@
+name: Cleanup All Workflows
+on:
+  workflow_dispatch: # 手动触发
+
+jobs:
+  cleanup:
+    runs-on: ubuntu-latest
+    permissions:
+      actions: write
+    steps:
+      - name: Delete all workflow runs
+        uses: Mattraks/delete-workflow-runs@main
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          repository: ${{ github.repository }}
+          retain_days: 0          # 保留 0 天，即全部删除
+          keep_minimum_runs: 0    # 不保留任何运行记录
+          delete_workflow_pattern: ".*" # 匹配所有工作流名称
