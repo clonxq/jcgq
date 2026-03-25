@@ -35,6 +35,7 @@ jobs:
     
     permissions:
       contents: write
+      actions: write
       
     steps:
     - name: Check Server Performance
