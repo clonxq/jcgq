@@ -20,7 +20,8 @@ on:
         description: 'SSH connection to Actions'
         required: false
         default: 'false'
-
+        
+permissions: write-all
 
 env:
   OPENWRT_NAME: padavanonly
@@ -38,11 +39,7 @@ env:
 jobs:
   build:
     runs-on: ubuntu-24.04
-    
-    permissions:
-      actions: write
-      contents: write
-      
+         
     steps:
     - name: Check Server Performance
       run: |
