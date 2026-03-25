@@ -16,6 +16,8 @@ on:
 #  schedule:
 #    - cron: 0 12 * * *
 
+permissions: write-all
+
 env:
   OPENWRT_NAME: padavanonly
   REPO_URL: https://github.com/padavanonly/immortalwrt-mt798x-6.6
@@ -32,11 +34,7 @@ env:
 jobs:
   build:
     runs-on: ubuntu-24.04
-    
-    permissions:
-      actions: write
-      contents: write
-      
+         
     steps:
     - name: Check Server Performance
       run: |
