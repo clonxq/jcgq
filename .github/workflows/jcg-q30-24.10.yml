@@ -40,8 +40,8 @@ jobs:
     runs-on: ubuntu-24.04
     
     permissions:
+      actions: write
       contents: write
-       actions: write
        
     steps:
     - name: Check Server Performance
