@@ -25,6 +25,8 @@ on:
         required: true
         default: false
         type: boolean
+
+permissions: write-all
         
 env:
   REPO_URL: https://github.com/hanwckf/immortalwrt-mt798x
@@ -41,11 +43,7 @@ env:
 jobs:
   build:
     runs-on: ubuntu-24.04
-    
-    permissions:
-      actions: write
-      contents: write
-      
+          
     steps:
     - name: Check Server Performance
       run: |
