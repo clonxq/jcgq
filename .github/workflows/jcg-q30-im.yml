@@ -21,7 +21,7 @@ on:
       include_mwan3:
         description: '是否编译 luci-app-mwan3'
         required: true
-        default: true
+        default: false
         type: boolean
 #  schedule:
 #    - cron: 0 12 * * 2
