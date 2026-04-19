@@ -161,18 +161,21 @@ jobs:
       if: env.UPLOAD_FIRMWARE == 'true' && !cancelled()
       run: |
         cd openwrt/bin/targets/*/*
-        # 1. 删除不必要的文件 [cite: 23]
+        # 1. 删除不必要的目录
         rm -rf packages
         
-        # 2. 遍历并重命名文件 
-        for file in $(ls *.bin *.img.gz *.manifest 2>/dev/null);
+        # 2. 遍历当前目录下所有文件
+        # 排除已经包含日期的文件，避免重复命名
+        for file in $(ls *.* 2>/dev/null);
         do
-          # 提取文件名主体（不含扩展名）
-          BASE_NAME="${file%.*}"
-          # 提取扩展名（支持 .bin 或 .img.gz）
-          EXT="${file#$BASE_NAME}"
-          # 将日期插入到原文件名后面，扩展名之前
-          mv "$file" "${BASE_NAME}-${{ env.FILE_DATE }}${EXT}"
+          if [[ "$file" != *"${{ env.FILE_DATE }}"* ]]; then
+            # 提取文件名主体
+            BASE_NAME="${file%.*}"
+            # 提取扩展名（包括开头的点）
+            EXT=".${file##*.}"
+            # 重命名：原名-日期.后缀
+            mv "$file" "${BASE_NAME}-${{ env.FILE_DATE }}${EXT}"
+          fi
         done
         
         echo "FIRMWARE=$PWD" >> $GITHUB_ENV
