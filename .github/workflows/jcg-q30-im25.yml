@@ -254,7 +254,7 @@ jobs:
         fi
 
         # 输出 Release 标签名
-        echo "release_tag=25-${{ env.DEVICE_NAME }}-${{ env.FILE_DATE }}" >> $GITHUB_OUTPUT
+        echo "release_tag=2512-${{ env.DEVICE_NAME }}-${{ env.FILE_DATE }}" >> $GITHUB_OUTPUT
         echo "status=success" >> $GITHUB_OUTPUT
 
     - name: 发布固件至Release
@@ -283,6 +283,6 @@ jobs:
       with:
         keep_latest: 2
         delete_tags: true
-        delete_tag_pattern: "25-.*"
+        delete_tag_pattern: "2512-.*"
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
