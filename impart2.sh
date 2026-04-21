@@ -28,21 +28,3 @@ git clone https://github.com/sbwml/packages_lang_golang -b 26.x feeds/packages/l
 
 #修复Rust编译失败
 sed -i 's/ci-llvm=true/ci-llvm=false/g' feeds/packages/lang/rust/Makefile
-
-# 定义目标文件路径（相对于源码根目录）
-TARGET_FILE="target/linux/mediatek/image/filogic.mk"
-
-# 远程文件地址
-REMOTE_URL="https://raw.githubusercontent.com/xqrock/jdbl/main/filogic.mk"
-
-# 执行替换动作
-echo "正在替换历史 Bug 文件: $TARGET_FILE ..."
-curl -fsSL "$REMOTE_URL" -o "$TARGET_FILE"
-
-# 校验是否替换成功（可选）
-if [ $? -eq 0 ]; then
-    echo "文件替换成功！"
-else
-    echo "警告：文件下载失败，请检查网络或 URL 有效性。"
-    exit 1
-fi
