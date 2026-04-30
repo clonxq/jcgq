@@ -23,8 +23,8 @@ on:
         required: true
         default: false
         type: boolean
-#  schedule:
-#    - cron: 0 12 * * 2
+  schedule:
+    - cron: 0 12 * * 2
 
 permissions: write-all
 
