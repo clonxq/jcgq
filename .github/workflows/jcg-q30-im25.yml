@@ -24,7 +24,7 @@ on:
         default: false
         type: boolean
 #  schedule:
-#    - cron: 0 12 * * 2
+#    - cron: 50 15 * * 2
 
 permissions: write-all
 
