@@ -44,8 +44,6 @@ git clone https://github.com/sbwml/luci-app-mosdns -b v5 package/mosdns
 git clone https://github.com/sbwml/v2ray-geodata package/v2ray-geodata
 git clone https://github.com/sirpdboy/luci-app-adguardhome package/luci-app-adguardhome
 git clone https://github.com/stackia/rtp2httpd package/rtp2httpd
-git clone https://github.com/jerrykuku/luci-theme-argon.git package/luci-theme-argon
-git clone https://github.com/jerrykuku/luci-app-argon-config.git package/luci-app-argon-config
 git clone https://github.com/eamonxg/luci-theme-aurora.git package/luci-theme-aurora
 extract_pkg "https://github.com/kenzok8/openwrt-packages" "adguardhome" "package/adguardhome"
 extract_pkg "https://github.com/vernesong/OpenClash" "luci-app-openclash" "package/luci-app-openclash"
