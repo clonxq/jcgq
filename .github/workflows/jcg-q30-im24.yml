@@ -1,3 +1,4 @@
+#
 # Copyright (c) 2019-2020 P3TERX <https://p3terx.com>
 #
 # This is free software, licensed under the MIT License.
@@ -41,6 +42,7 @@ env:
   REPO_URL: https://github.com/immortalwrt/immortalwrt
   REPO_BRANCH: openwrt-24.10
   FEEDS_CONF: feeds.conf.default
+  CONFIG_FILE: im.config
   DIY_P1_SH: impart1.sh
   DIY_P2_SH: impart2.sh
   SSH_ACTIONS: true
@@ -92,7 +94,7 @@ jobs:
       working-directory: /workdir
       run: |
         df -hT $PWD
-        git clone --depth=1 $REPO_URL -b$REPO_BRANCH openwrt
+        git clone --depth=1 $REPO_URL -b $REPO_BRANCH openwrt
         ln -sf /workdir/openwrt $GITHUB_WORKSPACE/openwrt
         
         # GitHub Action 移除国内下载源
@@ -103,7 +105,7 @@ jobs:
           
     - name: 加载feeds.conf.default & DIY_P1_SH
       run: |
-        [ -e $FEEDS_CONF ] && mv$FEEDS_CONF openwrt/feeds.conf.default
+        [ -e $FEEDS_CONF ] && mv $FEEDS_CONF openwrt/feeds.conf.default
         chmod +x $DIY_P1_SH
         cd openwrt
         $GITHUB_WORKSPACE/$DIY_P1_SH
@@ -138,7 +140,7 @@ jobs:
         else
           echo "CONFIG_PACKAGE_luci-app-mwan3=n" >> .config
           echo "跳过编译 mwan3"
-        fi        
+        fi       
         
     - name: SSH链接管理
       uses: P3TERX/ssh2actions@main
@@ -181,7 +183,7 @@ jobs:
         [ -s IP_ADDR ] && echo "IP_ADDR=$(cat IP_ADDR)" >> $GITHUB_ENV
         
         # 生成时间戳
-        echo "FILE_DATE=$(date +"\%Y\%m\%d\%H\%M")" >> $GITHUB_ENV
+        echo "FILE_DATE=$(date +"%Y%m%d%H%M")" >> $GITHUB_ENV
         
     - name: Check space usage
       if: (!cancelled())
@@ -216,7 +218,7 @@ jobs:
       uses: actions/upload-artifact@main
       if: steps.organize.outputs.status == 'success' && !cancelled()
       with:
-        name: OpenWrt_firmware${{ env.DEVICE_NAME }}{{ env.FILE_DATE }}
+        name: OpenWrt_firmware${{ env.DEVICE_NAME }}${{ env.FILE_DATE }}
         path: ${{ env.FIRMWARE }}
         
     - name: 生成固件Release标签
@@ -262,7 +264,7 @@ jobs:
           
           echo "" >> release_body.txt
           echo "[ 主题 ]" >> release_body.txt
-          echo "grep "luci-theme-" "$MANIFEST_FILE" | awk '{print $1}' | sort -u >> release_body.txt
+          grep "luci-theme-" "$MANIFEST_FILE" | awk '{print $1}' | sort -u >> release_body.txt
           echo "\`\`\`" >> release_body.txt
         fi
 
