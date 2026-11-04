@@ -27,5 +27,33 @@ rm -rf feeds/luci/applications/luci-app-openclash
 rm -rf feeds/packages/lang/golang
 git clone https://github.com/sbwml/packages_lang_golang -b 26.x feeds/packages/lang/golang
 
-#修复Rust编译失败
-sed -i 's/ci-llvm=true/ci-llvm=false/g' feeds/packages/lang/rust/Makefile
+## ----------------- Rust 综合修复逻辑 -----------------
+RUST_MAKE="feeds/packages/lang/rust/Makefile"
+
+if [ -f "$RUST_MAKE" ]; then
+    echo ">>> 发现 Rust Makefile，开始修复..."
+
+    # 1. 修复 CI LLVM 配置
+    sed -i 's/ci-llvm=true/ci-llvm=false/g' "$RUST_MAKE"
+
+    # 2. 动态检测并强行降级版本至 1.89.0
+    CURRENT_VERSION=$(grep -E '^PKG_VERSION:=' "$RUST_MAKE" | cut -d'=' -f2)
+
+    if [ "$CURRENT_VERSION" != "1.89.0" ]; then
+        echo ">>> 检测到当前 Rust 版本为 $CURRENT_VERSION，正在执行降级到 1.89.0..."
+        
+        # 通配替换版本号和对应的固定哈希值
+        sed -i 's/^PKG_VERSION:=.*/PKG_VERSION:=1.89.0/g' "$RUST_MAKE"
+        sed -i 's/^PKG_HASH:=.*/PKG_HASH:=0b9d55610d8270e06c44f459d1e2b7918a5e673809c592abed9b9c600e33d95a/g' "$RUST_MAKE"
+        
+        echo ">>> 降级指令已执行。"
+    else
+        echo ">>> 当前版本已经是 1.89.0，跳过降级。"
+    fi
+    echo ">>> Rust Makefile 处理完毕。"
+else
+    echo ">>> 错误: 未找到 $RUST_MAKE"
+fi
+echo "========================================="
+echo "DIY Part2 脚本执行结束"
+echo "========================================="
