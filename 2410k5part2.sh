@@ -57,3 +57,10 @@ fi
 echo "========================================="
 echo "DIY Part2 脚本执行结束"
 echo "========================================="
+
+# 移除针对 1.89.0 不兼容的 PowerPC 补丁，避免打补丁失败
+RUST_PATCH_DIR="feeds/packages/lang/rust/patches"
+if [ -f "$RUST_PATCH_DIR/0002-AtomicExpand-keep-the-release-fence-out-of-the-reserv.patch" ]; then
+    echo ">>> 正在移除与 Rust 1.89.0 不兼容的 LLVM PowerPC 补丁..."
+    rm -f "$RUST_PATCH_DIR/0002-AtomicExpand-keep-the-release-fence-out-of-the-reserv.patch"
+fi
