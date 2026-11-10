@@ -32,7 +32,7 @@ on:
           - im.config
           - imv1.config
 #  schedule:
-#    - cron: 15 18 * * 2
+#    - cron: 15 16 * * 2
 
 permissions: write-all
 
